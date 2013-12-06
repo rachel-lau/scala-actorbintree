@@ -73,28 +73,10 @@ class BinaryTreeSet extends Actor {
     case Insert(requester, id, elem) => {
       log.debug("Starting BinaryTreeSet.Insert id=" + id + " elem=" + elem)
       root ! Insert(requester, id, elem)
-      context.become(awaitInsert(requester))
     }
     case Contains(requester, id, elem) => {
       log.debug("Starting BinaryTreeSet.Contains id=" + id + " elem=" + elem) 
       root ! Contains(requester, id, elem)
-      context.become(awaitContains(requester))
-    }
-  }
-
-  def awaitInsert(requester: ActorRef) : Receive = LoggingReceive {
-    case OperationFinished(id) => {
-      log.debug("Starting BinaryTreeSet.awaitInsert")
-      requester ! OperationFinished(id)
-      context.unbecome()
-    }
-  }
-
-  def awaitContains(requester: ActorRef) : Receive = LoggingReceive {
-    case ContainsResult(id, result) => {
-      log.debug("Starting BinaryTreeSet.awaitContains")
-      requester ! ContainsResult(id, result)
-      context.unbecome()
     }
   }
 
@@ -137,25 +119,27 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     case Insert(requester, id, em) => {
       log.debug("Starting BinaryTreeNode.Insert id=" + id + " em=" + em)
       if (em == elem) {
-        sender ! OperationFinished(id)
-        log.debug("Already inserted node")
+        requester ! OperationFinished(id)
+        log.debug("Already inserted node id=" + id + " em=" + em)
       } else if (em < elem) {
         if (subtrees contains Left) {
           val leftTree = subtrees(Left)
+          leftTree ! Insert(requester, id, em)
         } else {
           val leftNode = context.actorOf(BinaryTreeNode.props(em, false))
           subtrees += (Left -> leftNode)
-          sender ! OperationFinished(id)
-          log.debug("Inserted left node")
+          requester ! OperationFinished(id)
+          log.debug("Inserted left node id=" + id + " em=" + em)
         }
       } else {
         if (subtrees contains Right) {
           val rightTree = subtrees(Right)
+          rightTree ! Insert(requester, id, em)
         } else {
           val rightNode = context.actorOf(BinaryTreeNode.props(em, false))
           subtrees += (Right -> rightNode)
-          sender ! OperationFinished(id)
-          log.debug("Inserted right node")
+          requester ! OperationFinished(id)
+          log.debug("Inserted right node=" + id + " em=" + em)
         }
       }
     }
@@ -163,35 +147,25 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     case Contains(requester, id, em) => {
       log.debug("Starting BinaryTreeNode.Contains id=" + id + " em=" + em)
       if (em == elem) {
-        sender ! ContainsResult(id, true)
-        log.debug("Found node")
+        requester ! ContainsResult(id, true)
+        log.debug("Found node id=" + id + " em=" + em)
       } else if (em < elem) {
         if (subtrees contains Left) {
           val leftTree = subtrees(Left)
           leftTree ! Contains(requester, id, em)
-          context.become(awaitContains())
         } else {
-          sender ! ContainsResult(id, false)
-          log.debug("Node not found on left")
+          requester ! ContainsResult(id, false)
+          log.debug("Node not found on left id=" + id + " em=" + em)
         }
       } else {
         if (subtrees contains Right) {
           val rightTree = subtrees(Right)
           rightTree ! Contains(requester, id, em)
-          context.become(awaitContains())
         } else {
-          sender ! ContainsResult(id, false)
-          log.debug("Node not found on right")
+          requester ! ContainsResult(id, false)
+          log.debug("Node not found on right id=" + id + " em=" + em)
         }
       }
-    }
-  }
-
-  def awaitContains() : Receive = LoggingReceive {
-    case ContainsResult(id, result) => {
-      log.debug("Starting BinaryTreeNode.awaitContains")
-      sender ! ContainsResult(id, result)
-      context.unbecome()
     }
   }
 

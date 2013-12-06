@@ -46,6 +46,18 @@ class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with FunSui
     receiveN(probe, ops, expected)
   }
 
+  test("the top node contains 0") {
+    val topNode = system.actorOf(Props[BinaryTreeSet])
+    topNode ! Contains(testActor, id = 1, 0)
+    expectMsg(ContainsResult(1, true))
+  }
+
+  test("insert to the top node") {
+    val topNode = system.actorOf(Props[BinaryTreeSet])
+    topNode ! Insert(testActor, id = 1, 1)
+    expectMsg(OperationFinished(1))
+  }
+
   test("proper inserts and lookups") {
     val topNode = system.actorOf(Props[BinaryTreeSet])
 
@@ -59,19 +71,56 @@ class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with FunSui
     expectMsg(ContainsResult(3, true))
   }
 
-  ignore("the top node contains 0") {
-    val topNode = system.actorOf(Props[BinaryTreeSet])
-    topNode ! Contains(testActor, id = 1, 0)
-    expectMsg(ContainsResult(1, true))
-  }
-
-  ignore("insert to the top node") {
+  test("insert duplicate node") {
     val topNode = system.actorOf(Props[BinaryTreeSet])
     topNode ! Insert(testActor, id = 1, 1)
     expectMsg(OperationFinished(1))
+
+    topNode ! Contains(testActor, id = 2, 1)
+    expectMsg(ContainsResult(2, true))
+
+    topNode ! Insert(testActor, id = 3, 1)
+    expectMsg(OperationFinished(3))
   }
 
-  ignore("instruction example") {
+  ignore("insert many nodes") {
+    val topNode = system.actorOf(Props[BinaryTreeSet])
+    topNode ! Insert(testActor, id = 1, 10)
+    topNode ! Insert(testActor, id = 2, -10)
+    topNode ! Insert(testActor, id = 3, 15)
+    topNode ! Insert(testActor, id = 4, 5)
+    topNode ! Insert(testActor, id = 5, -5)
+    topNode ! Insert(testActor, id = 6, -15)
+
+    expectMsg(OperationFinished(1))
+    expectMsg(OperationFinished(2))
+    expectMsg(OperationFinished(3))
+    expectMsg(OperationFinished(4))
+    expectMsg(OperationFinished(5))
+    expectMsg(OperationFinished(6))
+
+    topNode ! Contains(testActor, id = 7, 10)
+    topNode ! Contains(testActor, id = 8, -10)
+    topNode ! Contains(testActor, id = 9, 15)
+    topNode ! Contains(testActor, id = 10, 5)
+    topNode ! Contains(testActor, id = 11, -5)
+    topNode ! Contains(testActor, id = 12, -15)
+
+    topNode ! Contains(testActor, id = 13, 8)
+    topNode ! Contains(testActor, id = 14, -8)
+
+    expectMsg(ContainsResult(7, true))
+    expectMsg(ContainsResult(8, true))
+    expectMsg(ContainsResult(9, true))
+    expectMsg(ContainsResult(10, true))
+    expectMsg(ContainsResult(11, true))
+    expectMsg(ContainsResult(12, true))
+
+    expectMsg(ContainsResult(13, false))
+    expectMsg(ContainsResult(14, false))
+  }
+
+  test("instruction example") {
     val requester = TestProbe()
     val requesterRef = requester.ref
     val ops = List(
