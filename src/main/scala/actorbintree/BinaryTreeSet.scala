@@ -78,6 +78,10 @@ class BinaryTreeSet extends Actor {
       log.debug("Starting BinaryTreeSet.Contains id=" + id + " elem=" + elem) 
       root ! Contains(requester, id, elem)
     }
+    case Remove(requester, id, elem) => {
+      log.debug("Starting BinaryTreeSet.Remove id=" + id + " elem=" + elem) 
+      root ! Remove(requester, id, elem)
+    }
   }
 
   // optional
@@ -119,6 +123,9 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     case Insert(requester, id, em) => {
       log.debug("Starting BinaryTreeNode.Insert id=" + id + " em=" + em)
       if (em == elem) {
+        if (removed) {
+          removed = false
+        }
         requester ! OperationFinished(id)
         log.debug("Already inserted node id=" + id + " em=" + em)
       } else if (em < elem) {
@@ -147,8 +154,13 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     case Contains(requester, id, em) => {
       log.debug("Starting BinaryTreeNode.Contains id=" + id + " em=" + em)
       if (em == elem) {
-        requester ! ContainsResult(id, true)
-        log.debug("Found node id=" + id + " em=" + em)
+        if (removed) {
+          requester ! ContainsResult(id, false)
+          log.debug("Node not found on id=" + id + " em=" + em)
+        } else {
+          requester ! ContainsResult(id, true)
+          log.debug("Found node id=" + id + " em=" + em)
+        }
       } else if (em < elem) {
         if (subtrees contains Left) {
           val leftTree = subtrees(Left)
@@ -164,6 +176,33 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
         } else {
           requester ! ContainsResult(id, false)
           log.debug("Node not found on right id=" + id + " em=" + em)
+        }
+      }
+    }
+
+    case Remove(requester, id, em) => {
+      log.debug("Starting BinaryTreeNode.Remove id=" + id + " em=" + em)
+      if (em == elem) {
+        if (!removed) {
+          removed = true
+        }
+        requester ! OperationFinished(id)
+        log.debug("Removed node id=" + id + " em=" + em)
+      } else if (em < elem) {
+        if (subtrees contains Left) {
+          val leftTree = subtrees(Left)
+          leftTree ! Remove(requester, id, em)
+        } else {
+          requester ! OperationFinished(id)
+          log.debug("Missing left node id=" + id + " em=" + em)
+        }
+      } else {
+        if (subtrees contains Right) {
+          val rightTree = subtrees(Right)
+          rightTree ! Remove(requester, id, em)
+        } else {
+          requester ! OperationFinished(id)
+          log.debug("Missing right node id=" + id + " em=" + em)
         }
       }
     }

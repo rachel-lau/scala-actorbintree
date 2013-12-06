@@ -46,12 +46,6 @@ class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with FunSui
     receiveN(probe, ops, expected)
   }
 
-  test("the top node contains 0") {
-    val topNode = system.actorOf(Props[BinaryTreeSet])
-    topNode ! Contains(testActor, id = 1, 0)
-    expectMsg(ContainsResult(1, true))
-  }
-
   test("insert to the top node") {
     val topNode = system.actorOf(Props[BinaryTreeSet])
     topNode ! Insert(testActor, id = 1, 1)
