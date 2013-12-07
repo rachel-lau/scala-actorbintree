@@ -82,6 +82,11 @@ class BinaryTreeSet extends Actor {
       log.debug("Starting BinaryTreeSet.Remove id=" + id + " elem=" + elem) 
       root ! Remove(requester, id, elem)
     }
+    case GC => {
+      val newRoot = context.actorOf(BinaryTreeNode.props(0, initiallyRemoved = true))
+      context.become(garbageCollecting(newRoot))
+      root ! CopyTo(newRoot)
+    }
   }
 
   // optional
@@ -89,8 +94,26 @@ class BinaryTreeSet extends Actor {
     * `newRoot` is the root of the new binary tree where we want to copy
     * all non-removed elements into.
     */
-  def garbageCollecting(newRoot: ActorRef): Receive = ???
-
+  def garbageCollecting(newRoot: ActorRef): Receive = LoggingReceive {
+    case Insert(requester, id, elem) => {
+      log.debug("Add Insert to queue id=" + id + " elem=" + elem)
+      pendingQueue enqueue Insert(requester, id, elem)
+    }
+    case Contains(requester, id, elem) => {
+      log.debug("Add Contains to queue id=" + id + " elem=" + elem)
+      pendingQueue enqueue Contains(requester, id, elem)
+    }
+    case Remove(requester, id, elem) => {
+      log.debug("Add Remove to queue id=" + id + " elem=" + elem)
+      pendingQueue enqueue Remove(requester, id, elem)
+    }
+    case CopyFinished => {
+      log.debug("CopyFinished")
+      root = newRoot
+      context.become(normal)
+      pendingQueue foreach { root ! _ }
+    }
+  }
 }
 
 object BinaryTreeNode {
