@@ -97,21 +97,21 @@ class BinaryTreeSet extends Actor {
   def garbageCollecting(newRoot: ActorRef): Receive = LoggingReceive {
     case Insert(requester, id, elem) => {
       log.debug("Add Insert to queue id=" + id + " elem=" + elem)
-      pendingQueue enqueue Insert(requester, id, elem)
+      pendingQueue = pendingQueue enqueue Insert(requester, id, elem)
     }
     case Contains(requester, id, elem) => {
       log.debug("Add Contains to queue id=" + id + " elem=" + elem)
-      pendingQueue enqueue Contains(requester, id, elem)
+      pendingQueue = pendingQueue enqueue Contains(requester, id, elem)
     }
     case Remove(requester, id, elem) => {
       log.debug("Add Remove to queue id=" + id + " elem=" + elem)
-      pendingQueue enqueue Remove(requester, id, elem)
+      pendingQueue = pendingQueue enqueue Remove(requester, id, elem)
     }
     case CopyFinished => {
       log.debug("CopyFinished")
       root = newRoot
       context.become(normal)
-      pendingQueue foreach { root ! _ }
+      pendingQueue foreach { self ! _ }
     }
   }
 }
