@@ -71,15 +71,15 @@ class BinaryTreeSet extends Actor {
   /** Accepts `Operation` and `GC` messages. */
   val normal: Receive = LoggingReceive { 
     case Insert(requester, id, elem) => {
-      log.debug("Starting BinaryTreeSet.Insert id=" + id + " elem=" + elem)
+      // log.debug("Starting BinaryTreeSet.Insert id=" + id + " elem=" + elem)
       root ! Insert(requester, id, elem)
     }
     case Contains(requester, id, elem) => {
-      log.debug("Starting BinaryTreeSet.Contains id=" + id + " elem=" + elem) 
+      // log.debug("Starting BinaryTreeSet.Contains id=" + id + " elem=" + elem) 
       root ! Contains(requester, id, elem)
     }
     case Remove(requester, id, elem) => {
-      log.debug("Starting BinaryTreeSet.Remove id=" + id + " elem=" + elem) 
+      // log.debug("Starting BinaryTreeSet.Remove id=" + id + " elem=" + elem) 
       root ! Remove(requester, id, elem)
     }
     case GC => {
@@ -96,22 +96,22 @@ class BinaryTreeSet extends Actor {
     */
   def garbageCollecting(newRoot: ActorRef): Receive = LoggingReceive {
     case Insert(requester, id, elem) => {
-      log.debug("Add Insert to queue id=" + id + " elem=" + elem)
+      // log.debug("Add Insert to queue id=" + id + " elem=" + elem)
       pendingQueue = pendingQueue enqueue Insert(requester, id, elem)
     }
     case Contains(requester, id, elem) => {
-      log.debug("Add Contains to queue id=" + id + " elem=" + elem)
+      // log.debug("Add Contains to queue id=" + id + " elem=" + elem)
       pendingQueue = pendingQueue enqueue Contains(requester, id, elem)
     }
     case Remove(requester, id, elem) => {
-      log.debug("Add Remove to queue id=" + id + " elem=" + elem)
+      // log.debug("Add Remove to queue id=" + id + " elem=" + elem)
       pendingQueue = pendingQueue enqueue Remove(requester, id, elem)
     }
     case CopyFinished => {
-      log.debug("CopyFinished")
+      // log.debug("CopyFinished")
       root = newRoot
+      pendingQueue foreach { newRoot ! _ }
       context.become(normal)
-      pendingQueue foreach { self ! _ }
     }
   }
 }
@@ -144,13 +144,13 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
   /** Handles `Operation` messages and `CopyTo` requests. */
   val normal: Receive = LoggingReceive { 
     case Insert(requester, id, em) => {
-      log.debug("Starting BinaryTreeNode.Insert id=" + id + " em=" + em)
+      // log.debug("Starting BinaryTreeNode.Insert id=" + id + " em=" + em)
       if (em == elem) {
         if (removed) {
           removed = false
         }
         requester ! OperationFinished(id)
-        log.debug("Already inserted node id=" + id + " em=" + em)
+        // log.debug("Already inserted node id=" + id + " em=" + em)
       } else if (em < elem) {
         if (subtrees contains Left) {
           val leftTree = subtrees(Left)
@@ -159,7 +159,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
           val leftNode = context.actorOf(BinaryTreeNode.props(em, false))
           subtrees += (Left -> leftNode)
           requester ! OperationFinished(id)
-          log.debug("Inserted left node id=" + id + " em=" + em)
+          // log.debug("Inserted left node id=" + id + " em=" + em)
         }
       } else {
         if (subtrees contains Right) {
@@ -169,20 +169,20 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
           val rightNode = context.actorOf(BinaryTreeNode.props(em, false))
           subtrees += (Right -> rightNode)
           requester ! OperationFinished(id)
-          log.debug("Inserted right node=" + id + " em=" + em)
+          // log.debug("Inserted right node=" + id + " em=" + em)
         }
       }
     }
 
     case Contains(requester, id, em) => {
-      log.debug("Starting BinaryTreeNode.Contains id=" + id + " em=" + em)
+      // log.debug("Starting BinaryTreeNode.Contains id=" + id + " em=" + em)
       if (em == elem) {
         if (removed) {
           requester ! ContainsResult(id, false)
-          log.debug("Node not found on id=" + id + " em=" + em)
+          // log.debug("Node not found on id=" + id + " em=" + em)
         } else {
           requester ! ContainsResult(id, true)
-          log.debug("Found node id=" + id + " em=" + em)
+          // log.debug("Found node id=" + id + " em=" + em)
         }
       } else if (em < elem) {
         if (subtrees contains Left) {
@@ -190,7 +190,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
           leftTree ! Contains(requester, id, em)
         } else {
           requester ! ContainsResult(id, false)
-          log.debug("Node not found on left id=" + id + " em=" + em)
+          // log.debug("Node not found on left id=" + id + " em=" + em)
         }
       } else {
         if (subtrees contains Right) {
@@ -198,26 +198,26 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
           rightTree ! Contains(requester, id, em)
         } else {
           requester ! ContainsResult(id, false)
-          log.debug("Node not found on right id=" + id + " em=" + em)
+          // log.debug("Node not found on right id=" + id + " em=" + em)
         }
       }
     }
 
     case Remove(requester, id, em) => {
-      log.debug("Starting BinaryTreeNode.Remove id=" + id + " em=" + em)
+      // log.debug("Starting BinaryTreeNode.Remove id=" + id + " em=" + em)
       if (em == elem) {
         if (!removed) {
           removed = true
         }
         requester ! OperationFinished(id)
-        log.debug("Removed node id=" + id + " em=" + em)
+        // log.debug("Removed node id=" + id + " em=" + em)
       } else if (em < elem) {
         if (subtrees contains Left) {
           val leftTree = subtrees(Left)
           leftTree ! Remove(requester, id, em)
         } else {
           requester ! OperationFinished(id)
-          log.debug("Missing left node id=" + id + " em=" + em)
+          // log.debug("Missing left node id=" + id + " em=" + em)
         }
       } else {
         if (subtrees contains Right) {
@@ -225,7 +225,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
           rightTree ! Remove(requester, id, em)
         } else {
           requester ! OperationFinished(id)
-          log.debug("Missing right node id=" + id + " em=" + em)
+          // log.debug("Missing right node id=" + id + " em=" + em)
         }
       }
     }
@@ -233,7 +233,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     case CopyTo(treeNode) => {
       if (removed && subtrees.isEmpty) {
         context.parent ! CopyFinished
-        log.debug("Do not copy removed leaf node elem=" + elem)
+        // log.debug("Do not copy removed leaf node elem=" + elem)
       } else {
         var expected = Set[ActorRef]()
         if (subtrees contains Left) {
@@ -245,11 +245,11 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
       
         if (removed) {
           context.become(copying(expected, true))
-          log.debug("Copy subtrees of removed node elem=" + elem)
+          // log.debug("Copy subtrees of removed node elem=" + elem)
         } else {
           context.become(copying(expected, false))
           treeNode ! Insert(self, 0, elem)
-          log.debug("Copy node with subtrees elem=" + elem)
+          // log.debug("Copy node with subtrees elem=" + elem)
         }
         subtrees.values foreach {_ ! CopyTo(treeNode)}
       }
@@ -265,7 +265,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
       if (expected.isEmpty) {
         context.parent ! CopyFinished
         context.become(normal)
-        log.debug("CopyFinished after insert")
+        // log.debug("CopyFinished after insert")
       } else {
         context.become(copying(expected, true))
       }
@@ -275,7 +275,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
       if (waiting.isEmpty && insertConfirmed) {
         context.parent ! CopyFinished
         context.become(normal)
-        log.debug("CopyFinished after copying subtrees")
+        // log.debug("CopyFinished after copying subtrees")
       } else {
         context.become(copying(waiting, insertConfirmed))
       }
