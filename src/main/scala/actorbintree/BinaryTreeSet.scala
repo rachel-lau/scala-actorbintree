@@ -110,7 +110,11 @@ class BinaryTreeSet extends Actor {
     case CopyFinished => {
       // log.debug("CopyFinished")
       root = newRoot
-      pendingQueue foreach { newRoot ! _ }
+      while (!pendingQueue.isEmpty) {
+        val (ops, newQueue) = pendingQueue.dequeue
+        newRoot ! ops
+        pendingQueue = newQueue
+      }
       context.become(normal)
     }
   }
