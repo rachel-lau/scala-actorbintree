@@ -237,6 +237,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     case CopyTo(treeNode) => {
       if (removed && subtrees.isEmpty) {
         context.parent ! CopyFinished
+        context.stop(self)
         // log.debug("Do not copy removed leaf node elem=" + elem)
       } else {
         var expected = Set[ActorRef]()
@@ -268,7 +269,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
     case OperationFinished(_) => {
       if (expected.isEmpty) {
         context.parent ! CopyFinished
-        context.become(normal)
+        context.stop(self)
         // log.debug("CopyFinished after insert")
       } else {
         context.become(copying(expected, true))
@@ -278,7 +279,7 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
       val waiting = expected - sender
       if (waiting.isEmpty && insertConfirmed) {
         context.parent ! CopyFinished
-        context.become(normal)
+        context.stop(self)
         // log.debug("CopyFinished after copying subtrees")
       } else {
         context.become(copying(waiting, insertConfirmed))
