@@ -206,12 +206,56 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
         }
       }
     }
+
+    case CopyTo(treeNode) => {
+      if (removed && subtrees.isEmpty) {
+        context.parent ! CopyFinished
+        log.debug("Do not copy removed leaf node elem=" + elem)
+      } else {
+        var expected = Set[ActorRef]()
+        if (subtrees contains Left) {
+          expected += subtrees(Left)
+        }
+        if (subtrees contains Right) {
+          expected += subtrees(Right)
+        }
+      
+        if (removed) {
+          context.become(copying(expected, true))
+          log.debug("Copy subtrees of removed node elem=" + elem)
+        } else {
+          context.become(copying(expected, false))
+          treeNode ! Insert(self, 0, elem)
+          log.debug("Copy node with subtrees elem=" + elem)
+        }
+        subtrees.values foreach {_ ! CopyTo(treeNode)}
+      }
+    }
   }
 
   // optional
   /** `expected` is the set of ActorRefs whose replies we are waiting for,
     * `insertConfirmed` tracks whether the copy of this node to the new tree has been confirmed.
     */
-  def copying(expected: Set[ActorRef], insertConfirmed: Boolean): Receive = ???
-
+  def copying(expected: Set[ActorRef], insertConfirmed: Boolean): Receive = LoggingReceive {
+    case OperationFinished(_) => {
+      if (expected.isEmpty) {
+        context.parent ! CopyFinished
+        context.become(normal)
+        log.debug("CopyFinished after insert")
+      } else {
+        context.become(copying(expected, true))
+      }
+    }
+    case CopyFinished => {
+      val waiting = expected - sender
+      if (waiting.isEmpty && insertConfirmed) {
+        context.parent ! CopyFinished
+        context.become(normal)
+        log.debug("CopyFinished after copying subtrees")
+      } else {
+        context.become(copying(waiting, insertConfirmed))
+      }
+    }
+  }
 }
